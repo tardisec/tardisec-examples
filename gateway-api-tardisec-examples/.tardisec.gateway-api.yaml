@@ -1,0 +1,53 @@
+# Kubernetes Gateway API HTTPRoute: one manifest for Istio, Envoy Gateway, Traefik, Cilium, NGINX Gateway Fabric, HAProxy and Kong.
+# ResponseHeaderModifier is Extended conformance, not Core, so a conformant controller is not obliged to implement it. Check your controller's conformance report before you rely on this.
+# NGINX Gateway Fabric honours only the first filter when a rule configures several, so keep this filter first if you add others.
+# set overwrites a header the backend already sent. add would concatenate onto it, which is how a page ends up serving two policies.
+# parentRefs and backendRefs below are placeholders. Point them at your own Gateway and Service before you apply.
+# The set list is capped at 16 entries by the HTTPRoute CRD schema (maxItems), which is not adjustable, and the filter cannot be repeated to make room. Require-Document-Policy, Scripting-Policy, Strict-Transport-Security, X-Content-Type-Options, X-DNS-Prefetch-Control, X-Download-Options, X-Frame-Options, X-Permitted-Cross-Domain-Policies are omitted here. Serve them from your application instead.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tardisec-headers
+spec:
+  parentRefs:
+    - name: tardisec-gateway
+  rules:
+    - backendRefs:
+        - name: tardisec-app
+          port: 80
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: "Connection-Allowlist"
+                value: "(response-origin);report-to=default"
+              - name: "Connection-Allowlist-Report-Only"
+                value: "();report-to=default"
+              - name: "Content-Security-Policy"
+                value: "base-uri 'none';connect-src 'self';default-src 'report-sample' 'report-sha256';font-src 'self';form-action 'self';frame-ancestors 'none';img-src 'self';manifest-src 'self';report-to default;report-uri https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org;require-trusted-types-for 'script';script-src-elem 'self' 'report-sample' 'report-sha256';style-src-elem 'self' 'report-sample' 'report-sha256';upgrade-insecure-requests"
+              - name: "Content-Security-Policy-Report-Only"
+                value: "base-uri 'none';default-src 'report-sample' 'report-sha256';form-action 'none';frame-ancestors 'none';report-to default;report-uri https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org;require-trusted-types-for 'script'"
+              - name: "Cross-Origin-Embedder-Policy"
+                value: "require-corp;report-to=default"
+              - name: "Cross-Origin-Opener-Policy"
+                value: "same-origin;report-to=default"
+              - name: "Cross-Origin-Resource-Policy"
+                value: "same-origin"
+              - name: "Document-Isolation-Policy"
+                value: "isolate-and-require-corp;report-to=\"default\""
+              - name: "Document-Policy"
+                value: "*;report-to=default"
+              - name: "Integrity-Policy"
+                value: "blocked-destinations=(script style),endpoints=(default)"
+              - name: "NEL"
+                value: "{\"failure_fraction\":1,\"include_subdomains\":true,\"max_age\":31536000,\"report_to\":\"default\",\"success_fraction\":0}"
+              - name: "Origin-Agent-Cluster"
+                value: "?1"
+              - name: "Permissions-Policy"
+                value: "accelerometer=(),all-screens-capture=(),ambient-light-sensor=(),aria-notify=(),attribution-reporting=(),autofill=(),autoplay=(),battery=(),bluetooth=(),browsing-topics=(),camera=(),captured-surface-control=(),ch-device-memory=(),ch-downlink=(),ch-dpr=(),ch-ect=(),ch-prefers-color-scheme=(),ch-prefers-reduced-motion=(),ch-prefers-reduced-transparency=(),ch-rtt=(),ch-save-data=(),ch-ua=(),ch-ua-arch=(),ch-ua-bitness=(),ch-ua-form-factors=(),ch-ua-full-version=(),ch-ua-full-version-list=(),ch-ua-high-entropy-values=(),ch-ua-mobile=(),ch-ua-model=(),ch-ua-platform=(),ch-ua-platform-version=(),ch-ua-wow64=(),ch-viewport-height=(),ch-viewport-width=(),ch-width=(),clipboard-read=(),clipboard-write=(),compute-pressure=(),controlled-frame=(),cross-origin-isolated=(),deferred-fetch=(),deferred-fetch-minimal=(),device-attributes=(),digital-credentials-create=(),digital-credentials-get=(),direct-sockets=(),direct-sockets-multicast=(),direct-sockets-private=(),display-capture=(),encrypted-media=(),execution-while-not-rendered=(),execution-while-out-of-viewport=(),focus-without-user-activation=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),identity-credentials-get=(),idle-detection=(),interest-cohort=(),join-ad-interest-group=(),keyboard-map=(),language-detector=(),language-model=(),local-fonts=(),local-network=(),local-network-access=(),loopback-network=(),magnetometer=(),manual-text=(),media-playback-while-not-visible=(),mediasession=(),microphone=(),midi=(),monetization=(),navigation-override=(),on-device-speech-recognition=(),otp-credentials=(),payment=(),picture-in-picture=(),private-aggregation=(),private-state-token-issuance=(),private-state-token-redemption=(),publickey-credentials-create=(),publickey-credentials-get=(),record-ad-auction-events=(),rewriter=(),run-ad-auction=(),screen-wake-lock=(),serial=(),shared-storage=(),shared-storage-select-url=(),smart-card=(),speaker-selection=(),storage-access=(),sub-apps=(),summarizer=(),sync-script=(),sync-xhr=(),tools=(),translator=(),trust-token-redemption=(),unload=(),usb=(),usb-unrestricted=(),vertical-scroll=(),web-app-installation=(),web-printing=(),web-share=(),window-management=(),writer=(),xr-spatial-tracking=()"
+              - name: "Referrer-Policy"
+                value: "no-referrer"
+              - name: "Report-To"
+                value: "{\"endpoints\":[{\"url\":\"https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org\"}],\"group\":\"default\",\"include_subdomains\":true,\"max_age\":31536000}"
+              - name: "Reporting-Endpoints"
+                value: "default=\"https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org\""

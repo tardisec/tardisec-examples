@@ -1,0 +1,16 @@
+rules:
+  # Two `npm install` steps with no lockfile behind them. Neither can have one: the drift job
+  # installs packages the generator imports but never calls, and the type-check job wants the
+  # provider SDKs to float so a renamed field surfaces here rather than in a customer's stack.
+  adhoc-packages:
+    ignore:
+      - ci.yml
+  # Every example directory pins tardisec/tardisec-integration-github-action to a real commit
+  # commented `# v1`, but that repository has never been tagged, so zizmor cannot resolve the
+  # comment to a ref. Tagging v1 there deletes both of these entries.
+  ref-version-mismatch:
+    ignore:
+      - tardisec.yml
+  stale-action-refs:
+    ignore:
+      - tardisec.yml

@@ -1,0 +1,3 @@
+# Mix build output and fetched dependencies, regenerated on demand.
+_build/
+deps/

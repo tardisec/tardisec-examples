@@ -1,0 +1,22 @@
+# Wiring only: the IngressRoute that references the synced Middleware. Traefik v3 CRDs
+# (traefik.io/v1alpha1; v2 used traefik.containo.us and will not read this).
+#
+# Defining the Middleware is not enough. `middlewares` below is what attaches it, and leaving it
+# out is silent: the resource applies, the route works, and no header changes.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: site
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`example.com`)
+      services:
+        - name: site
+          port: 80
+      middlewares:
+        # Same namespace as this route. A Middleware elsewhere needs namespace-name form.
+        - name: tardisec

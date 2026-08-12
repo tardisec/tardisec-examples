@@ -1,0 +1,126 @@
+{
+	"Type": "AWS::CloudFront::ResponseHeadersPolicy",
+	"Properties": {
+		"ResponseHeadersPolicyConfig": {
+			"Name": "tardisec-headers",
+			"Comment": "tardisec headers. Values over 1783 chars omitted, raise quota L-8FE99263, origin override false.",
+			"SecurityHeadersConfig": {
+				"ContentSecurityPolicy": {
+					"ContentSecurityPolicy": "base-uri 'none';connect-src 'self';default-src 'report-sample' 'report-sha256';font-src 'self';form-action 'self';frame-ancestors 'none';img-src 'self';manifest-src 'self';report-to default;report-uri https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org;require-trusted-types-for 'script';script-src-elem 'self' 'report-sample' 'report-sha256';style-src-elem 'self' 'report-sample' 'report-sha256';upgrade-insecure-requests",
+					"Override": false
+				},
+				"ContentTypeOptions": {
+					"Override": false
+				},
+				"FrameOptions": {
+					"FrameOption": "DENY",
+					"Override": false
+				},
+				"ReferrerPolicy": {
+					"ReferrerPolicy": "no-referrer",
+					"Override": false
+				},
+				"StrictTransportSecurity": {
+					"AccessControlMaxAgeSec": 31536000,
+					"IncludeSubdomains": true,
+					"Preload": true,
+					"Override": false
+				}
+			},
+			"CustomHeadersConfig": {
+				"Items": [
+					{
+						"Header": "Connection-Allowlist",
+						"Value": "(response-origin);report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Connection-Allowlist-Report-Only",
+						"Value": "();report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Content-Security-Policy-Report-Only",
+						"Value": "base-uri 'none';default-src 'report-sample' 'report-sha256';form-action 'none';frame-ancestors 'none';report-to default;report-uri https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org;require-trusted-types-for 'script'",
+						"Override": false
+					},
+					{
+						"Header": "Cross-Origin-Embedder-Policy",
+						"Value": "require-corp;report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Cross-Origin-Opener-Policy",
+						"Value": "same-origin;report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Cross-Origin-Resource-Policy",
+						"Value": "same-origin",
+						"Override": false
+					},
+					{
+						"Header": "Document-Isolation-Policy",
+						"Value": "isolate-and-require-corp;report-to=\"default\"",
+						"Override": false
+					},
+					{
+						"Header": "Document-Policy",
+						"Value": "*;report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Integrity-Policy",
+						"Value": "blocked-destinations=(script style),endpoints=(default)",
+						"Override": false
+					},
+					{
+						"Header": "NEL",
+						"Value": "{\"failure_fraction\":1,\"include_subdomains\":true,\"max_age\":31536000,\"report_to\":\"default\",\"success_fraction\":0}",
+						"Override": false
+					},
+					{
+						"Header": "Origin-Agent-Cluster",
+						"Value": "?1",
+						"Override": false
+					},
+					{
+						"Header": "Report-To",
+						"Value": "{\"endpoints\":[{\"url\":\"https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org\"}],\"group\":\"default\",\"include_subdomains\":true,\"max_age\":31536000}",
+						"Override": false
+					},
+					{
+						"Header": "Reporting-Endpoints",
+						"Value": "default=\"https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org\"",
+						"Override": false
+					},
+					{
+						"Header": "Require-Document-Policy",
+						"Value": "*;report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "Scripting-Policy",
+						"Value": "eval=blocked, report-to=default",
+						"Override": false
+					},
+					{
+						"Header": "X-DNS-Prefetch-Control",
+						"Value": "off",
+						"Override": false
+					},
+					{
+						"Header": "X-Download-Options",
+						"Value": "noopen",
+						"Override": false
+					},
+					{
+						"Header": "X-Permitted-Cross-Domain-Policies",
+						"Value": "none",
+						"Override": false
+					}
+				]
+			}
+		}
+	}
+}

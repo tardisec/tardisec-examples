@@ -1,0 +1,53 @@
+{
+	"security": {
+		"headers": {
+			"contentSecurityPolicy": {
+				"base-uri": [
+					"'none'"
+				],
+				"connect-src": [
+					"'self'"
+				],
+				"default-src": [
+					"'report-sample'",
+					"'report-sha256'"
+				],
+				"font-src": [
+					"'self'"
+				],
+				"form-action": [
+					"'self'"
+				],
+				"frame-ancestors": [
+					"'none'"
+				],
+				"img-src": [
+					"'self'"
+				],
+				"manifest-src": [
+					"'self'"
+				],
+				"report-to": [
+					"default"
+				],
+				"report-uri": [
+					"https://5e7c9a9e-d31d-5f7a-8599-b72f466a0cae.report-to.org"
+				],
+				"require-trusted-types-for": [
+					"'script'"
+				],
+				"script-src-elem": [
+					"'self'",
+					"'report-sample'",
+					"'report-sha256'"
+				],
+				"style-src-elem": [
+					"'self'",
+					"'report-sample'",
+					"'report-sha256'"
+				],
+				"upgrade-insecure-requests": true
+			}
+		}
+	}
+}

@@ -1,0 +1,3 @@
+# Installed dependencies, regenerated on demand. Pulumi.yaml and Pulumi.<stack>.yaml are
+# config, not output, so they stay committed.
+node_modules/

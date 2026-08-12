@@ -1,0 +1,25 @@
+# Wiring only: the Gateway the synced HTTPRoute attaches to. `parentRefs` in that route names
+# this Gateway and this listener, so both have to exist before the route does anything.
+#
+# gatewayClassName is the one piece that is yours: it names the controller you run, and the
+# class has to already exist in the cluster (`kubectl get gatewayclass`).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tardisec
+  namespace: default
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: example-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same

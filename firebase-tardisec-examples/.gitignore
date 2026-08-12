@@ -1,0 +1,3 @@
+# Deploy cache from `firebase deploy`, regenerated on demand.
+.firebase/
+firebase-debug.log

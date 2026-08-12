@@ -1,0 +1,14 @@
+# Provider plugins and the local working directory.
+.terraform/
+
+# State, never committed: it stores every resource attribute in plaintext, including any
+# value a provider marks sensitive.
+*.tfstate
+*.tfstate.backup
+
+# Variable files, for the same reason: this is where tokens end up.
+*.tfvars
+*.tfvars.json
+
+# .terraform.lock.hcl is deliberately absent from this list. The provider lock file is meant
+# to be committed, so a plan runs against the versions it was written for.

@@ -1,0 +1,7 @@
+{
+	"name": "tardisec-headers",
+	"main": "src/index.js",
+	"compatibility_date": "2026-01-01",
+	// The zone sits in front of the closed platform, so the Worker runs on every request.
+	"routes": [{ "pattern": "example.com/*", "zone_name": "example.com" }]
+}

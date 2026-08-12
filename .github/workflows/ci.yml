@@ -1,0 +1,198 @@
+# Checks what this repo emits rather than what it authors. Every directory carries generated
+# `.tardisec.*` files and hand-written snippets that sit beside them, and until now nothing
+# compiled, formatted or regenerated any of it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  # Drift arrives from the generator's side, not from a push here, so poll for it.
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Config drift
+    runs-on: ubuntu-latest
+    # The generator lives in the private tardisec monorepo, so this needs a token a fork PR
+    # cannot be given. Fork PRs skip the job; the push and schedule runs are what enforce it.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read # read this repo's checked-in .tardisec.* files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed
+      # utils/ is the whole generator; nothing it imports lives outside that directory.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tardisec/monorepo
+          path: monorepo
+          sparse-checkout: utils
+          token: ${{ secrets.MONOREPO_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      # utils/config-files.js pulls in the DB and DNS helpers on its way to the pure assembly
+      # function, so their packages have to resolve even though nothing here calls them. `npm ci`
+      # against the monorepo's own lockfile is not an option: it carries `file:` dependencies
+      # pointing at sibling checkouts. A name missing from this list fails as a plain
+      # ERR_MODULE_NOT_FOUND naming the package to add.
+      - name: Install the generator's runtime dependencies
+        run: |
+          set -eu
+          rm -f monorepo/package-lock.json
+          printf '{"type":"module"}\n' > monorepo/package.json
+          npm install --prefix monorepo --no-audit --no-fund \
+            @aws-sdk/client-lambda @aws-sdk/rds-signer @middy/rds aws-xray-sdk-postgres \
+            pg psl tldts undici uuid
+      - name: Regenerate and diff
+        env:
+          MONOREPO: monorepo
+        run: node .github/check-drift.mjs
+
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read the checked-out .tf files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false # keep terraform's own exit codes
+      # `terraform fmt` on a directory skips dotfiles, and every generated snippet is one, so
+      # name the files instead of recursing. This is a promise about the served bytes, not house
+      # style: a consumer running `terraform fmt -check` over their repo must find nothing to do.
+      - name: terraform fmt
+        run: git ls-files -z '*.tf' | xargs -0 -r terraform fmt -check -diff
+      # Neither directory declares `required_providers`, so `terraform init` cannot resolve
+      # `cloudflare_*` on its own (it infers hashicorp/cloudflare, which does not exist). CI adds
+      # the source addresses the examples omit. The version floors are the ones the examples
+      # claim in their own comments, left floating so a provider major that breaks the snippet
+      # shows up here, which is the failure this repo has already had once.
+      # A generated snippet and the module beside it declare the same resource address on
+      # purpose, being alternatives rather than parts, so they validate as separate modules.
+      - name: terraform validate
+        env:
+          TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/terraform-plugins
+        run: |
+          set -eu
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          cloudflare='terraform {
+            required_providers {
+              cloudflare = { source = "cloudflare/cloudflare", version = ">= 5.0" }
+            }
+          }'
+          aws='terraform {
+            required_providers {
+              aws = { source = "hashicorp/aws", version = ">= 5.0" }
+            }
+          }'
+          zone_id='variable "cloudflare_zone_id" { type = string }'
+          validate() {
+            terraform -chdir="$1" init -backend=false -input=false -no-color > /dev/null
+            terraform -chdir="$1" validate -no-color
+          }
+
+          d=$(mktemp -d) && cp cloudflare-terraform-tardisec-examples/cloudflare.tf cloudflare-terraform-tardisec-examples/.tardisec.json "$d"/ && printf '%s\n' "$cloudflare" > "$d"/ci.tf && validate "$d"
+          d=$(mktemp -d) && cp cloudflare-terraform-tardisec-examples/.tardisec.cloudflare-terraform.tf "$d"/generated.tf && printf '%s\n%s\n' "$cloudflare" "$zone_id" > "$d"/ci.tf && validate "$d"
+          d=$(mktemp -d) && cp cloudfront-terraform-tardisec-examples/main.tf cloudfront-terraform-tardisec-examples/.tardisec.json "$d"/ && printf '%s\n' "$aws" > "$d"/ci.tf && validate "$d"
+          d=$(mktemp -d) && cp cloudfront-terraform-tardisec-examples/.tardisec.cloudfront-terraform.tf "$d"/generated.tf && printf '%s\n' "$aws" > "$d"/ci.tf && validate "$d"
+
+  types:
+    name: JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read the checked-out snippets
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Syntax, JavaScript
+        run: git ls-files -z '*.js' '*.mjs' | xargs -0 -r -n1 node --check
+      # No example directory carries a package.json, so the compiler and the types the IaC
+      # snippets need are installed here and left uncommitted.
+      # The provider SDKs float on purpose: type-checking against the latest is how a renamed
+      # field in @pulumi/aws or aws-cdk-lib surfaces here rather than in a customer's stack.
+      - name: Install TypeScript and the IaC types
+        run: |
+          npm install --no-save --no-audit --no-fund \
+            typescript@5.9.3 @types/node @pulumi/pulumi @pulumi/cloudflare @pulumi/aws \
+            aws-cdk-lib constructs
+      # Every framework snippet, parsed but not type-checked: checking them for real would mean
+      # installing Nuxt, Remix, Redwood, SolidStart, TanStack and Deno's Fresh to resolve their
+      # imports, which is a much larger surface than the errors it would find.
+      - name: Syntax, TypeScript
+        run: |
+          git ls-files -z '*.ts' '*.tsx' | xargs -0 -r ./node_modules/.bin/tsc \
+            --noEmit --noCheck \
+            --target esnext --module preserve --moduleResolution bundler --jsx react-jsx
+      # The IaC snippets are type-checked properly, because their imports are three packages
+      # rather than a framework, and a provider SDK renaming a field is exactly the drift that
+      # has bitten these directories before.
+      # .tardisec.cloudfront-cdk.ts is excluded: it is a fragment meant to be pasted inside a
+      # Stack constructor, so its bare `this` has no Construct to bind to on its own.
+      - name: Types, infrastructure as code
+        run: |
+          git ls-files -z '*-pulumi-tardisec-examples/*.ts' '*-cdk-tardisec-examples/*.ts' \
+            | grep -zv '\.tardisec\.cloudfront-cdk\.ts$' \
+            | xargs -0 -r ./node_modules/.bin/tsc \
+              --noEmit --skipLibCheck --strict \
+              --target esnext --module preserve --moduleResolution bundler
+
+  workflows:
+    name: Workflows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read the checked-out workflow files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed
+      # Both tools ship as a single pinned binary, so neither needs an action wrapper of its own.
+      # Bare `actionlint` only reads this repo's own .github/workflows, so name the files: the
+      # sync workflow each example directory carries is the copy customers paste, and it is the
+      # one worth linting.
+      - name: actionlint
+        run: |
+          set -eu
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          git ls-files -z '*.github/workflows/*.yml' '*.github/workflows/*.yaml' \
+            | xargs -0 -r "$(go env GOPATH)"/bin/actionlint
+      - name: zizmor
+        env:
+          # Lets zizmor resolve each pinned SHA back to a tag, which is what stale-action-refs
+          # and unpinned-uses check. Read-only, and the default token already has no more.
+          GH_TOKEN: ${{ github.token }}
+        run: pipx run zizmor==1.29.0 --persona=pedantic .
+
+  dashes:
+    name: Punctuation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read the checked-out files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed
+      - name: No en dash or em dash
+        run: |
+          if git grep -n -P '[\x{2013}\x{2014}]' -- .; then
+            echo "::error::en dash or em dash found; use plain punctuation"
+            exit 1
+          fi

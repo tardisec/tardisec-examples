@@ -1,0 +1,5 @@
+# Netlify reads `_headers` out of the publish directory, so copy the synced file there after
+# your own build, which wipes it. Set both to whatever your framework publishes.
+[build]
+  command = "npm run build && cp .tardisec.netlify.headers dist/_headers"
+  publish = "dist"

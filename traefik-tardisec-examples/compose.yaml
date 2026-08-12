@@ -1,0 +1,24 @@
+# Wiring only: the router, and the label that attaches the middleware to it. The header labels
+# themselves come from the synced .tardisec.traefik.yaml; paste its Compose block into the
+# `labels` list below, beside the two router labels.
+services:
+  traefik:
+    image: traefik:v3.6
+    command:
+      - --providers.docker=true
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  site:
+    image: nginx:alpine
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.site.rule=Host(`example.com`)
+      - traefik.http.routers.site.entrypoints=websecure
+      # Defining the middleware is not enough. This is the line that attaches it, and leaving it
+      # out is silent: the labels are valid, Traefik starts clean, and no header changes.
+      # The @docker suffix names the provider the middleware was defined by.
+      - traefik.http.routers.site.middlewares=tardisec@docker

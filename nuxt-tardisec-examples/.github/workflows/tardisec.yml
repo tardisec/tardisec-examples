@@ -1,0 +1,35 @@
+# Pulls .tardisec.json + .tardisec.nuxt.json and opens a PR when either changed.
+# Authenticates with the workflow's OIDC token, so there is no secret to store.
+# Inputs, other providers, and formatter options: https://github.com/tardisec/tardisec-integration-github-action
+name: tardisec
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+permissions: {}
+
+# Two syncs would reset the same branch, so queue instead of overlapping.
+concurrency:
+  group: tardisec-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync config
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # mint the OIDC token tardisec verifies
+      contents: write # create the sync branch and commit
+      pull-requests: write # open the PR
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # nothing is pushed; the commit goes over the API
+      - uses: tardisec/tardisec-integration-github-action@c7cd9150af8f374c2999e974d903d680453d828b # v1
+        with:
+          domain: example.com
+          files: |
+            .tardisec.json
+            .tardisec.nuxt.json

@@ -1,0 +1,3 @@
+# CDK synth output and installed dependencies, regenerated on demand.
+cdk.out/
+node_modules/
